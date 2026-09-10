@@ -8,7 +8,7 @@ Mac Care is a lightweight native macOS maintenance and health application. It pr
 - Health inspection for disk capacity, memory pressure, physical memory, swap, CPU utilization, uptime, and battery signals when available.
 - Storage analysis limited to supported cache, log, trash, developer, and package-manager categories.
 - Process inspection with PID, name, CPU, RSS, and uptime; command-line arguments and environment variables are not returned.
-- Application analysis for `/Applications` and `~/Applications`, including bundle metadata, approximate size, and a conservative Spotlight last-used signal.
+- Installed Software Inventory through `app_scan`: visible applications plus bounded supporting/background components from fixed application, Application Support, launchd, login/background-item, system-extension, and Homebrew sources.
 - Homebrew inspection for version, outdated formulae/casks, cleanup preview, unused dependencies, and cache size.
 - Cleanup planning and execution with explicit risk classification and candidate IDs.
 - A constrained stdio MCP server exposing only semantic Mac Care capabilities.
@@ -50,6 +50,8 @@ The stdio server exposes exactly these tools:
 
 Inputs are bounded JSON schemas with `additionalProperties=false`. There is no generic shell, command execution, arbitrary file read/write, delete, find, or filesystem traversal tool.
 
+`app_scan` is metadata-only and uses implementation-owned roots. It preserves visible application name, bundle ID, version, approximate installed size, and Spotlight last-used signal, while also reporting bounded nested apps/helpers, LaunchAgents/Daemons, login/background items, system extensions, and Homebrew formulae/casks/services. Inventory items are never automatic `SAFE` cleanup candidates: ordinary software is `REVIEW`, existing privacy boundaries remain `PROTECTED`, and inventory is not fed into `cleanup_plan`. Platform sources are best-effort and expose `AVAILABLE`/`PARTIAL`/`UNAVAILABLE` status instead of failing the whole scan. `app_scan` grants no uninstall or service-lifecycle authority.
+
 Build and start the MCP server:
 
 ```sh
@@ -80,7 +82,7 @@ python3 scripts/mcp-smoke.py
 
 ## Known v0.1 limitations
 
-Mac Care scans only explicitly supported locations instead of crawling the entire home directory. Application "last used" data is only a recommendation signal and depends on Spotlight metadata. Battery fields vary by hardware. Process management, automatic app uninstall, privileged cleanup, arbitrary filesystem cleanup, and PROTECTED overrides are intentionally absent. Homebrew support requires Homebrew in a supported standard installation location.
+Mac Care scans only explicitly supported locations instead of crawling the entire home directory. Installed Software Inventory is bounded and best-effort, so a global result limit can truncate later sources while reporting that source as partial. Application "last used" data is only a recommendation signal and depends on Spotlight metadata. Battery fields vary by hardware. Process management, automatic app uninstall, privileged cleanup, arbitrary filesystem cleanup, and PROTECTED overrides are intentionally absent. Homebrew support requires Homebrew in a supported standard installation location.
 
 ## Agent maintenance policy
 

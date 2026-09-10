@@ -24,12 +24,12 @@ struct DirectoryDiskUsage: Sendable {
         guard process.terminationStatus == 0 else {
             throw MacCareError.commandFailed("Directory usage unavailable.")
         }
-        return try parseKiB(data)
+        return try Self.parseKiB(data)
     }
 }
 
-private extension DirectoryDiskUsage {
-    func parseKiB(_ data: Data) throws -> Int64 {
+extension DirectoryDiskUsage {
+    static func parseKiB(_ data: Data) throws -> Int64 {
         let text = String(decoding: data, as: UTF8.self)
         guard let firstLine = text.split(separator: "\n", maxSplits: 1).first,
               let firstField = firstLine.split(whereSeparator: { $0 == " " || $0 == "\t" }).first,

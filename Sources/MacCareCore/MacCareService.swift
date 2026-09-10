@@ -13,7 +13,10 @@ public actor MacCareService {
     public func healthCheck() throws -> HealthSnapshot { try HealthScanner().scan() }
     public func storageScan() throws -> StorageScanReport { try StorageScanner(privacyPolicy: privacyPolicy).report() }
     public func processScan(limit: Int = 50) throws -> [ProcessSnapshot] { try ProcessScanner().scan(limit: limit) }
-    public func appScan(limit: Int = 250) -> [ApplicationSnapshot] { ApplicationScanner(privacyPolicy: privacyPolicy).scan(limit: limit) }
+    public func applications(limit: Int = 250) -> [ApplicationSnapshot] { ApplicationScanner(privacyPolicy: privacyPolicy).scan(limit: limit) }
+    public func appScan(limit: Int = 250) -> InstalledSoftwareInventoryReport {
+        InstalledSoftwareInventoryScanner(privacyPolicy: privacyPolicy).scan(limit: limit)
+    }
     public func brewScan() -> BrewSnapshot { HomebrewScanner(privacyPolicy: privacyPolicy).scan() }
 
     public func cleanupPlan(maxCandidates: Int = 200) async throws -> CleanupPlan {

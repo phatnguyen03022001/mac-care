@@ -103,6 +103,7 @@ public struct ApplicationSnapshot: Codable, Sendable, Identifiable {
     public let approximateBytes: Int64
     public let lastUsedAt: Date?
     public let usageSignal: String
+    public let cleanupDisposition: CleanupRisk
 }
 
 public struct BrewSnapshot: Codable, Sendable {

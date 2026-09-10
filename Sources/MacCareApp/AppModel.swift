@@ -24,7 +24,7 @@ final class AppModel: ObservableObject {
             health = try await service.healthCheck()
             storage = try await service.storageScan()
             processes = try await service.processScan(limit: 50)
-            applications = await service.appScan(limit: 250)
+            applications = await service.applications(limit: 250)
             brew = await service.brewScan()
             cleanupPlan = try await service.cleanupPlan(maxCandidates: 200)
             privacyReport = await service.privacySelfTest()
@@ -51,7 +51,7 @@ final class AppModel: ObservableObject {
     }
 
     func refreshApplications() async {
-        applications = await service.appScan(limit: 250)
+        applications = await service.applications(limit: 250)
     }
 
     func refreshBrew() async {

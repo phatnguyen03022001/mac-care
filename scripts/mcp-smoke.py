@@ -90,7 +90,12 @@ def main():
             print(f"{name}=ok")
         assert isinstance(payloads["health_check"], dict)
         assert len(payloads["process_scan"]) <= 5
-        assert len(payloads["app_scan"]) <= 5
+        inventory = payloads["app_scan"]
+        assert isinstance(inventory, dict)
+        assert len(inventory.get("applications", [])) + len(inventory.get("components", [])) <= 5
+        assert isinstance(inventory.get("sources"), list)
+        assert all(item.get("cleanupDisposition") != "SAFE" for item in inventory.get("applications", []))
+        assert all(item.get("cleanupDisposition") != "SAFE" for item in inventory.get("components", []))
         assert isinstance(payloads["brew_scan"].get("available"), bool)
         assert isinstance(payloads["storage_scan"].get("candidateCount"), int)
         assert len(payloads["cleanup_plan"].get("candidates", [])) <= 5

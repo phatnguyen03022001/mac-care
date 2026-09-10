@@ -1,25 +1,48 @@
 import Foundation
 
+protocol ApplicationDiskUsageMeasuring: Sendable {
+    func size(of directory: URL) throws -> Int64
+}
+
+extension DirectoryDiskUsage: ApplicationDiskUsageMeasuring {}
+
 public struct ApplicationScanner: Sendable {
     private let privacyPolicy: PrivacyPolicy
-    public init(privacyPolicy: PrivacyPolicy = PrivacyPolicy()) { self.privacyPolicy = privacyPolicy }
+    private let roots: [URL]
+    private let diskUsage: any ApplicationDiskUsageMeasuring
+
+    public init(privacyPolicy: PrivacyPolicy = PrivacyPolicy(), roots: [URL]? = nil) {
+        self.privacyPolicy = privacyPolicy
+        self.roots = roots ?? [
+            URL(fileURLWithPath: "/Applications", isDirectory: true),
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true),
+        ]
+        self.diskUsage = DirectoryDiskUsage()
+    }
+
+    init(privacyPolicy: PrivacyPolicy, roots: [URL], diskUsage: any ApplicationDiskUsageMeasuring) {
+        self.privacyPolicy = privacyPolicy
+        self.roots = roots
+        self.diskUsage = diskUsage
+    }
 
     public func scan(limit: Int = 250) -> [ApplicationSnapshot] {
         let fm = FileManager.default
-        let roots = [URL(fileURLWithPath: "/Applications", isDirectory: true), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications", isDirectory: true)]
         var apps: [ApplicationSnapshot] = []
-        let sizer = FileTreeSizer(privacyPolicy: privacyPolicy)
         for root in roots where privacyPolicy.decision(for: root) == .allowed {
-            let children = (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? []
-            for url in children where url.pathExtension.lowercased() == "app" && apps.count < limit {
+            let children = ((try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])) ?? []).sorted { $0.path < $1.path }
+            for child in children where child.pathExtension.lowercased() == "app" && apps.count < limit {
+                let url = child.standardizedFileURL
                 guard privacyPolicy.decision(for: url) == .allowed else { continue }
+                guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]),
+                      values.isDirectory == true, values.isSymbolicLink != true else { continue }
                 let bundle = Bundle(url: url)
                 let info = bundle?.infoDictionary
                 let name = (info?["CFBundleDisplayName"] as? String) ?? (info?["CFBundleName"] as? String) ?? url.deletingPathExtension().lastPathComponent
                 let version = (info?["CFBundleShortVersionString"] as? String) ?? (info?["CFBundleVersion"] as? String)
-                let bytes = (try? sizer.size(of: url, maximumEntries: 500_000)) ?? 0
+                let bytes = (try? diskUsage.size(of: url)) ?? 0
                 let lastUsed = spotlightLastUsed(url)
-                apps.append(.init(name: name, bundleIdentifier: bundle?.bundleIdentifier, version: version, path: url.path, approximateBytes: bytes, lastUsedAt: lastUsed, usageSignal: lastUsed == nil ? "No reliable Spotlight last-used signal" : "Spotlight kMDItemLastUsedDate"))
+                apps.append(.init(name: name, bundleIdentifier: bundle?.bundleIdentifier, version: version, path: url.path, approximateBytes: bytes, lastUsedAt: lastUsed, usageSignal: lastUsed == nil ? "No reliable Spotlight last-used signal" : "Spotlight kMDItemLastUsedDate", cleanupDisposition: .review))
             }
         }
         return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }

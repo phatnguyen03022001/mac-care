@@ -14,8 +14,8 @@ struct ToolDefinitions {
                     "limit": integerSchema(minimum: 1, maximum: 200, description: "Maximum process rows")
                 ]))
             case "app_scan":
-                Tool(name: name, description: "Inspect applications from standard application directories without uninstalling them.", inputSchema: objectSchema([
-                    "limit": integerSchema(minimum: 1, maximum: 250, description: "Maximum application rows")
+                Tool(name: name, description: "Inventory installed applications plus bounded supporting/background software metadata from fixed system locations. Inventory is read-only and grants no uninstall authority.", inputSchema: objectSchema([
+                    "limit": integerSchema(minimum: 1, maximum: 250, description: "Maximum combined application and component rows")
                 ]))
             case "brew_scan":
                 Tool(name: name, description: "Run fixed read-only Homebrew maintenance inspection.", inputSchema: objectSchema())
