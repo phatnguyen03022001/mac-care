@@ -9,6 +9,7 @@ public struct PrivacySelfTester: Sendable {
         let matrix: [(String, URL)] = [
             ("Pictures denied", syntheticHome.appendingPathComponent("Pictures/a.jpg")),
             ("Moved photoslibrary denied", URL(fileURLWithPath: "/Volumes/Test/Private.photoslibrary/original")),
+            ("Photos log denied", syntheticHome.appendingPathComponent("Library/Logs/PhotosSearch.aapbz/child.log")),
             ("Keychain denied", syntheticHome.appendingPathComponent("Library/Keychains/login.keychain-db")),
             ("SSH denied", syntheticHome.appendingPathComponent(".ssh/id_ed25519")),
             ("Cloud credentials denied", syntheticHome.appendingPathComponent(".aws/credentials")),

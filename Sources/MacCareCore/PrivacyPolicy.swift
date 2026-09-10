@@ -56,14 +56,30 @@ public struct PrivacyPolicy: Sendable {
             let tail = String(lower.dropFirst((home + "/library/group containers/").count))
             if tail.split(separator: "/").first.map({ $0.contains("photos") }) == true { return true }
         }
-        if hasPathPrefix(lower, home + "/library/caches") {
-            let tail = String(lower.dropFirst((home + "/library/caches/").count))
-            if tail.split(separator: "/").first.map({ $0.contains("photos") }) == true { return true }
+        if let entry = firstLevelEntry(in: lower, under: home + "/library/caches"), entry.contains("photos") {
+            return true
+        }
+        if let entry = firstLevelEntry(in: lower, under: home + "/library/logs"), isApplePhotosLogEntry(entry) {
+            return true
         }
 
         let secretNames: Set<String> = ["cookies", "login data", "web data", "sessions", "sessionstore.jsonlz4", "logins.json", "key4.db"]
         if components.contains(where: { secretNames.contains($0) }) { return true }
         return false
+    }
+
+    private func firstLevelEntry(in path: String, under root: String) -> String? {
+        guard hasPathPrefix(path, root), path != root else { return nil }
+        let tail = String(path.dropFirst((root + "/").count))
+        return tail.split(separator: "/").first.map(String.init)
+    }
+
+    private func isApplePhotosLogEntry(_ entry: String) -> Bool {
+        entry == "photos" ||
+            entry.hasPrefix("photossearch") ||
+            entry.hasPrefix("photolibrary") ||
+            entry.hasPrefix("photoanalysis") ||
+            entry.hasPrefix("com.apple.photos")
     }
 
     private func hasPathPrefix(_ path: String, _ prefix: String) -> Bool {

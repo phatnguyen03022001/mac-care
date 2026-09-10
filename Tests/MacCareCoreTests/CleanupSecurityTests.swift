@@ -23,6 +23,27 @@ final class CleanupSecurityTests: XCTestCase {
         await XCTAssertThrowsErrorAsync { _ = try await executor.execute(planID: plan.planID, candidateIDs: [plan.candidates[0].candidateID], allowReview: true) }
     }
 
+
+    func testPhotosRelatedSafeCandidateIsRevalidatedAndRejected() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("mac-care-photos-log-\(UUID().uuidString)")
+        let home = root.appendingPathComponent("home")
+        let photosLog = home.appendingPathComponent("Library/Logs/PhotosSearch.aapbz")
+        let fixture = photosLog.appendingPathComponent("synthetic.log")
+        try FileManager.default.createDirectory(at: photosLog, withIntermediateDirectories: true)
+        try Data("synthetic".utf8).write(to: fixture)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let store = CleanupPlanStore(ttl: 600)
+        let candidate = PlannedCleanupCandidate(category: "User logs", displayPath: photosLog.path, estimatedBytes: 9, reason: "synthetic", risk: .safe, proposedAction: "delete", target: .file(photosLog))
+        let plan = await store.issue(candidates: [candidate])
+        let executor = CleanupExecutor(store: store, privacyPolicy: PrivacyPolicy(homeDirectory: home))
+
+        await XCTAssertThrowsErrorAsync {
+            _ = try await executor.execute(planID: plan.planID, candidateIDs: [candidate.candidateID], allowReview: false)
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.path))
+    }
+
     func testSafeCandidateExecutesOnlyIssuedSyntheticFixture() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("mac-care-safe-\(UUID().uuidString)")
         let fixture = root.appendingPathComponent("cache.bin")

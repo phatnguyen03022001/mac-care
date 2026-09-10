@@ -30,6 +30,40 @@ final class PrivacyPolicyTests: XCTestCase {
         }
     }
 
+
+    func testPhotosSearchLogAndDescendantsAreProtectedCaseInsensitively() {
+        let policy = PrivacyPolicy(homeDirectory: home)
+        let paths = [
+            "/Users/synthetic/Library/Logs/PhotosSearch.aapbz",
+            "/Users/synthetic/Library/Logs/PhotosSearch.aapbz/child.log",
+            "/Users/synthetic/LiBrArY/LoGs/pHoToSsEaRcH.AAPBZ/child.log",
+        ]
+        for path in paths {
+            XCTAssertEqual(policy.decision(for: URL(fileURLWithPath: path)), .protected, path)
+        }
+    }
+
+    func testExistingPhotosCacheProtectionRemainsProtected() {
+        let policy = PrivacyPolicy(homeDirectory: home)
+        XCTAssertEqual(
+            policy.decision(for: URL(fileURLWithPath: "/Users/synthetic/Library/Caches/com.apple.Photos/cache.db")),
+            .protected
+        )
+    }
+
+    func testPrivacySelfTestCoversPhotosLogBoundary() {
+        let report = PrivacySelfTester().run()
+        XCTAssertTrue(report.checks.contains(where: { $0.name == "Photos log denied" && $0.passed }))
+    }
+
+    func testUnrelatedLogWithPhotosSubstringIsNotGloballyProtected() {
+        let policy = PrivacyPolicy(homeDirectory: home)
+        XCTAssertEqual(
+            policy.decision(for: URL(fileURLWithPath: "/Users/synthetic/Library/Logs/myphotoshelper/session.log")),
+            .allowed
+        )
+    }
+
     func testSymlinkCannotBypassPhotosLibraryProtection() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let target = base.appendingPathComponent("Vault.photoslibrary", isDirectory: true)

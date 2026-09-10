@@ -1,5 +1,10 @@
 import Foundation
 
+private enum StorageSizingStrategy {
+    case policyAwareTree
+    case trustedDirectoryUsage
+}
+
 struct StorageScanner: Sendable {
     let privacyPolicy: PrivacyPolicy
     let homeDirectory: URL
@@ -10,10 +15,23 @@ struct StorageScanner: Sendable {
 
     func candidates(maxCandidates: Int = 200) throws -> [PlannedCleanupCandidate] {
         let fm = FileManager.default
-        let sizer = FileTreeSizer(privacyPolicy: privacyPolicy)
+        let treeSizer = FileTreeSizer(privacyPolicy: privacyPolicy)
+        let directorySizer = DirectoryDiskUsage()
         var result: [PlannedCleanupCandidate] = []
 
-        func appendRoot(_ url: URL, category: String, risk: CleanupRisk, reason: String, splitChildren: Bool) {
+        func size(_ item: URL, using strategy: StorageSizingStrategy) -> Int64 {
+            switch strategy {
+            case .policyAwareTree:
+                return (try? treeSizer.size(of: item)) ?? 0
+            case .trustedDirectoryUsage:
+                guard privacyPolicy.decision(for: item) == .allowed else { return 0 }
+                let values = try? item.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                guard values?.isDirectory == true, values?.isSymbolicLink != true else { return 0 }
+                return (try? directorySizer.size(of: item)) ?? 0
+            }
+        }
+
+        func appendRoot(_ url: URL, category: String, risk: CleanupRisk, reason: String, splitChildren: Bool, sizing: StorageSizingStrategy = .policyAwareTree) {
             guard result.count < maxCandidates, fm.fileExists(atPath: url.path), privacyPolicy.decision(for: url) == .allowed else { return }
             let urls: [URL]
             if splitChildren {
@@ -21,7 +39,7 @@ struct StorageScanner: Sendable {
             } else { urls = [url] }
             for item in urls where result.count < maxCandidates {
                 guard privacyPolicy.decision(for: item) == .allowed else { continue }
-                let bytes = (try? sizer.size(of: item)) ?? 0
+                let bytes = size(item, using: sizing)
                 guard bytes > 0 else { continue }
                 result.append(.init(category: category, displayPath: item.path, estimatedBytes: bytes, reason: reason, risk: risk, proposedAction: risk == .review ? "Move to Trash after explicit review" : "Delete regenerable data", target: .file(item)))
             }
@@ -31,9 +49,9 @@ struct StorageScanner: Sendable {
         appendRoot(homeDirectory.appendingPathComponent("Library/Logs"), category: "User logs", risk: .safe, reason: "Diagnostic logs that applications can recreate", splitChildren: true)
         appendRoot(homeDirectory.appendingPathComponent(".Trash"), category: "Trash", risk: .review, reason: "User-deleted items may still be intentionally recoverable", splitChildren: true)
         appendRoot(homeDirectory.appendingPathComponent("Library/Developer/Xcode/DerivedData"), category: "Xcode DerivedData", risk: .safe, reason: "Regenerable Xcode build artifacts", splitChildren: true)
-        appendRoot(homeDirectory.appendingPathComponent(".npm/_cacache"), category: "npm cache", risk: .safe, reason: "Regenerable npm package cache", splitChildren: false)
-        appendRoot(homeDirectory.appendingPathComponent("Library/pnpm/store"), category: "pnpm store", risk: .safe, reason: "Regenerable pnpm content-addressed store", splitChildren: false)
-        appendRoot(homeDirectory.appendingPathComponent("Library/Caches/Yarn"), category: "Yarn cache", risk: .safe, reason: "Regenerable Yarn package cache", splitChildren: false)
+        appendRoot(homeDirectory.appendingPathComponent(".npm/_cacache"), category: "npm cache", risk: .safe, reason: "Regenerable npm package cache", splitChildren: false, sizing: .trustedDirectoryUsage)
+        appendRoot(homeDirectory.appendingPathComponent("Library/pnpm/store"), category: "pnpm store", risk: .safe, reason: "Regenerable pnpm content-addressed store", splitChildren: false, sizing: .trustedDirectoryUsage)
+        appendRoot(homeDirectory.appendingPathComponent("Library/Caches/Yarn"), category: "Yarn cache", risk: .safe, reason: "Regenerable Yarn package cache", splitChildren: false, sizing: .trustedDirectoryUsage)
         return result
     }
 
