@@ -18,6 +18,9 @@ public actor MacCareService {
         InstalledSoftwareInventoryScanner(privacyPolicy: privacyPolicy).scan(limit: limit)
     }
     public func brewScan() -> BrewSnapshot { HomebrewScanner(privacyPolicy: privacyPolicy).scan() }
+    public func securityAudit() -> BackgroundSecurityAuditReport {
+        BackgroundSecurityAuditor(privacyPolicy: privacyPolicy).audit()
+    }
 
     public func cleanupPlan(maxCandidates: Int = 200) async throws -> CleanupPlan {
         var candidates = try StorageScanner(privacyPolicy: privacyPolicy).candidates(maxCandidates: maxCandidates)

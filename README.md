@@ -9,6 +9,7 @@ Mac Care is a lightweight native macOS maintenance and health application. It pr
 - Storage analysis limited to supported cache, log, trash, developer, and package-manager categories.
 - Process inspection with PID, name, CPU, RSS, and uptime; command-line arguments and environment variables are not returned.
 - Installed Software Inventory through `app_scan`: visible applications plus bounded supporting/background components from fixed application, Application Support, launchd, login/background-item, system-extension, and Homebrew sources.
+- Background & Security Audit through `security_audit`: read-only Gatekeeper, FileVault, SIP, firewall, startup/background, and system-extension status with conservative deterministic recommendations.
 - Homebrew inspection for version, outdated formulae/casks, cleanup preview, unused dependencies, and cache size.
 - Cleanup planning and execution with explicit risk classification and candidate IDs.
 - A constrained stdio MCP server exposing only semantic Mac Care capabilities.
@@ -47,10 +48,13 @@ The stdio server exposes exactly these tools:
 - `cleanup_plan`
 - `cleanup_execute`
 - `privacy_self_test`
+- `security_audit`
 
 Inputs are bounded JSON schemas with `additionalProperties=false`. There is no generic shell, command execution, arbitrary file read/write, delete, find, or filesystem traversal tool.
 
 `app_scan` is metadata-only and uses implementation-owned roots. It preserves visible application name, bundle ID, version, approximate installed size, and Spotlight last-used signal, while also reporting bounded nested apps/helpers, LaunchAgents/Daemons, login/background items, system extensions, and Homebrew formulae/casks/services. Inventory items are never automatic `SAFE` cleanup candidates: ordinary software is `REVIEW`, existing privacy boundaries remain `PROTECTED`, and inventory is not fed into `cleanup_plan`. Platform sources are best-effort and expose `AVAILABLE`/`PARTIAL`/`UNAVAILABLE` status instead of failing the whole scan. `app_scan` grants no uninstall or service-lifecycle authority.
+
+`security_audit` reuses one bounded Installed Software Inventory scan and fixed public macOS status commands. Recommendations such as `KEEP_ENABLED`, `DISABLE_IF_UNUSED`, `ENABLE_RECOMMENDED`, and `REVIEW` are advisory only and never grant enable/disable/start/stop/uninstall authority. Aggregate TCC permission visibility is intentionally reported as unsupported because Mac Care does not inspect private TCC databases or bypass macOS privacy controls.
 
 Build and start the MCP server:
 

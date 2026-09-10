@@ -50,6 +50,7 @@ public struct InstalledSoftwareComponent: Codable, Sendable {
     public let associationConfidence: SoftwareAssociationConfidence?
     public let executionStatus: String?
     public let cleanupDisposition: CleanupRisk
+    public var componentSubtype: String? = nil
 }
 
 public struct InstalledSoftwareSourceStatus: Codable, Sendable {

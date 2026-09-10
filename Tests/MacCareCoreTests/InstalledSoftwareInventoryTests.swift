@@ -124,6 +124,7 @@ final class InstalledSoftwareInventoryTests: XCTestCase {
     func testSystemExtensionParserReturnsBoundedMetadataAndMarksMalformedPartial() throws {
         let input = """
         2 extension(s)
+        --- com.apple.system_extension.network_extension
         enabled\tactive\tteamID\tbundleID (version)\tname\t[state]
         *\t*\tTEAM123\tcom.example.extension (1.2/45)\tExample Extension\t[activated enabled]
         malformed extension row
@@ -134,7 +135,21 @@ final class InstalledSoftwareInventoryTests: XCTestCase {
         XCTAssertEqual(item.identifier, "com.example.extension")
         XCTAssertEqual(item.version, "1.2")
         XCTAssertEqual(item.executionStatus, "activated enabled")
+        XCTAssertEqual(item.componentSubtype, "network_extension")
         XCTAssertTrue(parsed.partial)
+    }
+
+    func testSystemExtensionSubtypeSurvivesInventoryEnrichment() throws {
+        let fixture = try InventoryFixture()
+        defer { fixture.cleanup() }
+        let scanner = InstalledSoftwareInventoryScanner(
+            privacyPolicy: fixture.policy, homeDirectory: fixture.home, roots: fixture.roots,
+            commandRunner: PlatformSubtypeInventoryRunner(), includePlatformSources: true, includeHomebrew: false
+        )
+        let report = scanner.scan(limit: 20)
+        let item = try XCTUnwrap(report.components.first { $0.kind == .systemExtension })
+        XCTAssertEqual(item.identifier, "com.example.endpoint")
+        XCTAssertEqual(item.componentSubtype, "endpoint_security")
     }
 
     func testUnavailablePlatformSourcesDoNotFailWholeInventory() throws {
@@ -153,6 +168,21 @@ final class InstalledSoftwareInventoryTests: XCTestCase {
         XCTAssertEqual(report.applications.count, 1)
         XCTAssertTrue(report.sources.contains { $0.source == .loginBackgroundItems && $0.status != .available })
         XCTAssertTrue(report.sources.contains { $0.source == .systemExtensions && $0.status != .available })
+    }
+}
+
+private struct PlatformSubtypeInventoryRunner: InventoryCommandRunning {
+    func run(executable: String, arguments: [String]) throws -> String {
+        if executable == "/usr/bin/sfltool" { return "" }
+        if executable == "/usr/bin/systemextensionsctl" {
+            return """
+            1 extension(s)
+            --- com.apple.system_extension.endpoint_security
+            enabled\tactive\tteamID\tbundleID (version)\tname\t[state]
+            *\t*\tTEAM123\tcom.example.endpoint (1.0/1)\tExample Endpoint\t[activated enabled]
+            """
+        }
+        throw MacCareError.commandFailed("unexpected synthetic command")
     }
 }
 

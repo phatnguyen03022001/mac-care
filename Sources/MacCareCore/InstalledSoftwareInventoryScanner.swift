@@ -60,7 +60,15 @@ struct InstalledSoftwareInventoryScanner: Sendable {
     }
 
     func scan(limit: Int = 250) -> InstalledSoftwareInventoryReport {
-        let boundedLimit = max(1, min(limit, 250))
+        scan(limit: limit, hardLimit: 250)
+    }
+
+    func scanForSecurityAudit(limit: Int = 500) -> InstalledSoftwareInventoryReport {
+        scan(limit: limit, hardLimit: 500)
+    }
+
+    private func scan(limit: Int, hardLimit: Int) -> InstalledSoftwareInventoryReport {
+        let boundedLimit = max(1, min(limit, hardLimit))
         let applications = ApplicationScanner(privacyPolicy: privacyPolicy, roots: roots.applicationRoots).scan(limit: boundedLimit)
         let appDescriptors = applications.map(ApplicationDescriptor.init)
         var components: [InstalledSoftwareComponent] = []
@@ -495,7 +503,8 @@ private extension InstalledSoftwareInventoryScanner {
             associatedProduct: inferred?.0,
             associationConfidence: inferred?.1,
             executionStatus: component.executionStatus,
-            cleanupDisposition: disposition
+            cleanupDisposition: disposition,
+            componentSubtype: component.componentSubtype
         )
     }
 

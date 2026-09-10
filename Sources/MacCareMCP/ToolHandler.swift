@@ -42,6 +42,9 @@ struct ToolHandler: Sendable {
             case "privacy_self_test":
                 _ = try requireOnly(arguments, keys: [])
                 return try success(await service.privacySelfTest())
+            case "security_audit":
+                _ = try requireOnly(arguments, keys: [])
+                return try success(await service.securityAudit())
             default:
                 return failure("Unsupported Mac Care tool.")
             }

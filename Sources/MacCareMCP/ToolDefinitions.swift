@@ -35,6 +35,8 @@ struct ToolDefinitions {
                 ], required: ["plan_id", "candidate_ids"]))
             case "privacy_self_test":
                 Tool(name: name, description: "Run synthetic privacy-boundary checks without touching protected user data.", inputSchema: objectSchema())
+            case "security_audit":
+                Tool(name: name, description: "Read macOS security-control status and provide conservative recommendations for installed background items and system extensions. Recommendation does not grant mutation authority.", inputSchema: objectSchema())
             default:
                 preconditionFailure("Unknown Mac Care MCP tool catalog entry")
             }

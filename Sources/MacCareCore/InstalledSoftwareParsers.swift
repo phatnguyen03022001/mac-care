@@ -150,10 +150,16 @@ enum SystemExtensionInventoryParser {
         var components: [InstalledSoftwareComponent] = []
         var partial = false
         var observedDataRows = 0
+        var currentSubtype: String? = nil
 
         for rawLine in text.split(separator: "\n") {
             let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
-            if line.isEmpty || line.hasSuffix("extension(s)") || line.hasPrefix("--- ") || line.hasPrefix("enabled\tactive\tteamID") { continue }
+            if line.hasPrefix("--- com.apple.system_extension.") {
+                let tail = line.dropFirst("--- com.apple.system_extension.".count)
+                currentSubtype = tail.split(whereSeparator: { $0.isWhitespace }).first.map(String.init)
+                continue
+            }
+            if line.isEmpty || line.hasSuffix("extension(s)") || line.hasPrefix("enabled\tactive\tteamID") { continue }
             let fields = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
             guard fields.count >= 6 else { partial = true; continue }
             observedDataRows += 1
@@ -171,7 +177,8 @@ enum SystemExtensionInventoryParser {
                 associatedProduct: nil,
                 associationConfidence: nil,
                 executionStatus: stripBrackets(fields[5]),
-                cleanupDisposition: .review
+                cleanupDisposition: .review,
+                componentSubtype: currentSubtype
             ))
         }
         return .init(components: components, partial: partial, truncated: observedDataRows > components.count)

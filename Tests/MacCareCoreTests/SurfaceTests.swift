@@ -3,8 +3,8 @@ import XCTest
 
 final class SurfaceTests: XCTestCase {
     func testMCPToolCatalogContainsOnlySemanticTools() {
-        XCTAssertEqual(Set(MCPToolCatalog.names), Set(["health_check", "storage_scan", "process_scan", "app_scan", "brew_scan", "cleanup_plan", "cleanup_execute", "privacy_self_test"]))
-        let forbidden = ["shell", "exec", "read_file", "delete", "rm", "find", "run_script"]
+        XCTAssertEqual(Set(MCPToolCatalog.names), Set(["health_check", "storage_scan", "process_scan", "app_scan", "brew_scan", "cleanup_plan", "cleanup_execute", "privacy_self_test", "security_audit"]))
+        let forbidden = ["shell", "exec", "read_file", "write_file", "delete", "rm", "find", "run_script", "security_enable", "security_disable", "login_item_toggle", "extension_disable", "service_stop"]
         XCTAssertTrue(forbidden.allSatisfy { !MCPToolCatalog.names.contains($0) })
     }
 

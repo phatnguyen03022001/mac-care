@@ -128,5 +128,5 @@ public struct PrivacySelfTestReport: Codable, Sendable {
 }
 
 public enum MCPToolCatalog {
-    public static let names = ["health_check", "storage_scan", "process_scan", "app_scan", "brew_scan", "cleanup_plan", "cleanup_execute", "privacy_self_test"]
+    public static let names = ["health_check", "storage_scan", "process_scan", "app_scan", "brew_scan", "cleanup_plan", "cleanup_execute", "privacy_self_test", "security_audit"]
 }

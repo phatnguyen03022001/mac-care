@@ -11,6 +11,7 @@ SERVER = ROOT / ".build" / "release" / "mac-care-mcp"
 EXPECTED = {
     "health_check", "storage_scan", "process_scan", "app_scan",
     "brew_scan", "cleanup_plan", "cleanup_execute", "privacy_self_test",
+    "security_audit",
 }
 FORBIDDEN = {"shell", "exec", "run_command", "read_file", "write_file", "delete", "rm", "find"}
 
@@ -71,7 +72,7 @@ def main():
         assert names == EXPECTED, names
         assert not names.intersection(FORBIDDEN), names.intersection(FORBIDDEN)
         assert all(tool.get("inputSchema", {}).get("additionalProperties") is False for tool in tools)
-        print("tools=8 forbidden=0 schemas_bounded=yes")
+        print("tools=9 forbidden=0 schemas_bounded=yes")
 
         checks = [
             (3, "health_check", {}, 120),
@@ -80,7 +81,8 @@ def main():
             (6, "brew_scan", {}, 180),
             (7, "storage_scan", {}, 180),
             (8, "cleanup_plan", {"max_candidates": 5}, 180),
-            (9, "privacy_self_test", {}, 120),
+            (9, "security_audit", {}, 180),
+            (10, "privacy_self_test", {}, 120),
         ]
         payloads = {}
         for request_id, name, arguments, timeout in checks:
@@ -99,33 +101,40 @@ def main():
         assert isinstance(payloads["brew_scan"].get("available"), bool)
         assert isinstance(payloads["storage_scan"].get("candidateCount"), int)
         assert len(payloads["cleanup_plan"].get("candidates", [])) <= 5
+        audit = payloads["security_audit"]
+        assert len(audit.get("securityControls", [])) == 6
+        assert isinstance(audit.get("backgroundRecommendations"), list)
+        assert isinstance(audit.get("extensionRecommendations"), list)
+        assert any(source.get("source") == "TCC_PRIVACY_PERMISSIONS" and source.get("status") == "UNSUPPORTED" for source in audit.get("sources", []))
         assert payloads["privacy_self_test"].get("passed") is True
 
         fake_plan = str(uuid.uuid4())
         fake_candidate = str(uuid.uuid4())
-        is_error, _ = call(proc, 10, "cleanup_execute", {
+        is_error, _ = call(proc, 11, "cleanup_execute", {
             "plan_id": fake_plan, "candidate_ids": [fake_candidate],
         })
         assert is_error, "unknown cleanup plan must fail closed"
 
         live_plan = payloads["cleanup_plan"]["planID"]
-        is_error, _ = call(proc, 11, "cleanup_execute", {
+        is_error, _ = call(proc, 12, "cleanup_execute", {
             "plan_id": live_plan, "candidate_ids": [fake_candidate],
         })
         assert is_error, "tampered candidate must fail closed"
 
-        is_error, _ = call(proc, 12, "cleanup_execute", {
+        is_error, _ = call(proc, 13, "cleanup_execute", {
             "plan_id": fake_plan, "candidate_ids": [fake_candidate], "allow_review": True,
         })
         assert is_error, "MCP must reject review approval input"
 
-        is_error, _ = call(proc, 13, "cleanup_execute", {
+        is_error, _ = call(proc, 14, "cleanup_execute", {
             "plan_id": fake_plan, "candidate_ids": [fake_candidate], "path": "/tmp/not-accepted",
         })
         assert is_error, "MCP must reject arbitrary cleanup paths"
         print("cleanup_execute=fails_closed tampered=rejected review_self_approval=rejected arbitrary_path=rejected")
 
-        is_error, _ = call(proc, 14, "shell", {"command": "echo forbidden"})
+        is_error, _ = call(proc, 15, "security_audit", {"command": "forbidden"})
+        assert is_error, "security_audit must reject unexpected inputs"
+        is_error, _ = call(proc, 16, "shell", {"command": "echo forbidden"})
         assert is_error, "generic shell tool must not exist"
         print("generic_shell=rejected privacy_self_test=pass")
     finally:
