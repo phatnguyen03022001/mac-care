@@ -81,3 +81,16 @@ python3 scripts/mcp-smoke.py
 ## Known v0.1 limitations
 
 Mac Care scans only explicitly supported locations instead of crawling the entire home directory. Application "last used" data is only a recommendation signal and depends on Spotlight metadata. Battery fields vary by hardware. Process management, automatic app uninstall, privileged cleanup, arbitrary filesystem cleanup, and PROTECTED overrides are intentionally absent. Homebrew support requires Homebrew in a supported standard installation location.
+
+## Agent maintenance policy
+
+Direct ChatGPT, Executor, and authorized local-tool maintenance operations are governed by [`RULES.md`](./RULES.md), the canonical operator safety policy for this repository.
+
+The policy applies whether maintenance is performed through:
+
+- the Mac Care MCP;
+- Agent Runtime;
+- Remote Desktop Commander;
+- another explicitly authorized local execution surface.
+
+The executable's existing privacy and cleanup protections remain implementation-level defense; `RULES.md` defines the broader operator authority and boundaries.
